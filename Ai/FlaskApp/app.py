@@ -17,7 +17,7 @@ app = Flask(__name__)
 concept_extractor = pipeline("ner", model="dslim/bert-base-NER")
 
 model_name = "iarfmoose/t5-base-question-generator"
-tokenizer = T5Tokenizer.from_pretrained(model_name)
+tokenizer = T5Tokenizer.from_pretrained(model_name, legacy=True)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 model.eval()
 
@@ -26,7 +26,8 @@ model.to(device)
 
 def extract_key_concepts(text):
     entities = concept_extractor(text)
-    return list(set(ent['word'] for ent in entities if ent['entity_group'] in ['ORG', 'PERSON', 'LOCATION', 'MISC']))
+    return list(set(ent['word'] for ent in entities if ent['entity'] in ['ORG', 'PER', 'LOC', 'MISC']))
+
 
 def generate_questions(text, num=5, q_type="mcq", lang="en", instructions=""):
     key_concepts = extract_key_concepts(text)
@@ -52,7 +53,10 @@ def generate_questions(text, num=5, q_type="mcq", lang="en", instructions=""):
             attention_mask=encoded_input["attention_mask"],
             max_length=64,
             num_return_sequences=num,
-            num_beams=5,
+            do_sample=True,
+            top_k=50,
+            top_p=0.95,
+            temperature=0.9,
             early_stopping=True
         )
 
@@ -60,7 +64,7 @@ def generate_questions(text, num=5, q_type="mcq", lang="en", instructions=""):
 
     return [{
         "question": q,
-        "answer": "To be reviewed", #QA extraction model here maybe
+        "answer": "To be reviewed",
         "type": q_type,
         "lang": lang,
         "instructions": instructions
@@ -70,20 +74,16 @@ def generate_questions(text, num=5, q_type="mcq", lang="en", instructions=""):
 # --- Test ---
 if __name__ == '__main__':
     sample_text = (
-        "Artificial Intelligence is transforming industries by enabling automation, "
-        "smart assistants like Alexa and Siri, and intelligent decision-making in healthcare, "
-        "finance, and transportation."
+        "Psychology, derived from the Greek words psyche (meaning soul or mind) and logos (meaning study), is the scientific study of behavior and mental processes. Though psychology as a formal discipline is relatively young, its roots extend deep into ancient philosophy, notably in the works of Greek philosophers like Socrates, Plato, and Aristotle, who questioned human thought, motivation, and behavior as early as 400 BCE. However, psychology did not become a distinct scientific field until the late 19th century. The official birth of psychology as a science is often dated to 1879, when German physician and physiologist Wilhelm Wundt established the first experimental psychology laboratory at the University of Leipzig in Germany. Wundt used a method called introspection to analyze the inner workings of the human mind and is widely regarded as the “father of modern psychology.” His student, Edward Titchener, later brought Wundt’s ideas to the United States and developed the school of thought known as structuralism, which aimed to break down mental processes into their most basic components. Around the same time, William James, often referred to as the “father of American psychology,” founded a competing school called functionalism, influenced by Charles Darwin’s theory of evolution. Functionalism focused on the purpose of consciousness and behavior in helping individuals adapt to their environment. As psychology evolved, it moved beyond introspection and philosophical speculation to embrace scientific methodology. In the early 20th century, Sigmund Freud, an Austrian neurologist, introduced psychoanalysis, a theory and method emphasizing unconscious motives, childhood experiences, and internal conflicts, profoundly influencing both psychology and culture. While Freud’s theories were controversial, they opened the door to new discussions about personality and mental illness. Soon after, John B. Watson and B.F. Skinner pioneered behaviorism, a school of thought that focused on observable behaviors and the ways they are learned, rejecting introspective methods. Behaviorism dominated American psychology for much of the early to mid-20th century and led to practical applications in education, therapy, and training. Later, in the 1950s and 1960s, humanistic psychology, led by Carl Rogers and Abraham Maslow, emerged in response to the deterministic views of psychoanalysis and behaviorism. It emphasized human potential, free will, and the importance of self-actualization. During the same period, the cognitive revolution began, restoring interest in the study of mental processes such as thinking, memory, and language. Psychologists like Jean Piaget and Noam Chomsky played key roles in this shift. Today, psychology is a diverse field with many sub-disciplines, including clinical, cognitive, developmental, social, biological, and industrial-organizational psychology. It employs various research methods, from experiments and case studies to neuroimaging and behavioral observation. Modern psychology integrates biological, psychological, and socio-cultural perspectives to provide a more complete understanding of human behavior. From its philosophical origins to its status as a rigorous science, psychology continues to evolve, driven by new technologies, discoveries, and the timeless quest to understand the human mind. As we begin this course, remember: psychology is not just about diagnosing mental illness—it’s about understanding ourselves and others, improving lives, and exploring what it means to be human."
     )
 
     questions = generate_questions(
         text=sample_text,
-        num=3,
+        num=12,
         q_type="short",
         lang="en",
-        instructions="Focus on use cases of AI in industries."
+        instructions="Focus on facts about psychology"
     )
 
     for i, q in enumerate(questions, start=1):
-        print(f"\nQuestion {i}: {q['question']}\nType: {q['type']}\nLang: {q['lang']}\n")
-
-
+        print(f"\nQuestion {i}: {q['question']}\n")

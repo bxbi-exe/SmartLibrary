@@ -2,3 +2,9 @@ flask
 spacy
 torch
 transformers
+huggingface-hub
+sentencepiece
+protobuf
+tqdm
+requests
+safetensors

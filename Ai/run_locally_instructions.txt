@@ -1,0 +1,22 @@
+1. create virtual environment and activate it
+python -m venv venv
+.\venv\Scripts\activate
+
+2. install packages
+pip install -r Ai/FlaskApp/requirements.txt
+
+3. run
+python Ai/FlaskApp/app.py or
+python Ai/FlaskApp/models.py
+
+if running models.py, get answer through postman:
+POST request: http://localhost:5000/generate
+HEADERS: Content-Type application/json
+BODY:
+{
+  "text": "Psychology is the scientific study of behavior and mental processes. It was officially born in 1879 by Wilhelm Wundt in Germany.",
+  "num_questions": 10,
+  "types": ["multiple_choice", "true_false", "short_answer"]
+}
+
+(or any other context)
