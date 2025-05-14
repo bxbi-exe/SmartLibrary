@@ -3,6 +3,7 @@ package mk.ukim.finki.smartlibrary.Models;
 import jakarta.persistence.*;
 import mk.ukim.finki.smartlibrary.Enums.FileType;
 
+import java.io.File;
 import java.util.Date;
 import java.util.List;
 
@@ -20,6 +21,8 @@ public class UploadDocument {
     @Column(nullable = false)
     private FileType fileType;
 
+    @Column(nullable = false)
+    private File file;
 
     private boolean processed;
 
@@ -32,6 +35,9 @@ public class UploadDocument {
 
     @ManyToMany(mappedBy = "documents")
     private List<Category> categories;
+
+    private String description;
+
 
     public Long getId() {
         return id;
@@ -87,5 +93,20 @@ public class UploadDocument {
 
     public void setCategories(List<Category> categories) {
         this.categories = categories;
+    }
+
+    public File getFile() {
+        return file;
+    }
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

@@ -4,6 +4,7 @@ import mk.ukim.finki.smartlibrary.Models.UploadDocument;
 import mk.ukim.finki.smartlibrary.Service.UploadDocumentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import mk.ukim.finki.smartlibrary.DTOs.UploadDocumentDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,5 +48,11 @@ public class UploadDocumentController {
     @DeleteMapping("/{id}")
     public boolean deleteUploadDocument(@PathVariable Long id) {
         return uploadDocumentService.delete(id);
+    }
+
+    @PostMapping("/upload")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Long uploadDocument(@RequestBody UploadDocumentDTO uploadDocument) {
+        return uploadDocumentService.upload(uploadDocument);
     }
 }
