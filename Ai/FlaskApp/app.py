@@ -1,20 +1,72 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request
+import mimetypes
+from docx import Document
+import PyPDF2
 
-import os
-import uuid
-import shutil
-import csv
-
-import spacy
 import torch
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline, T5Tokenizer
 
-# --- Flask Setup ---
 app = Flask(__name__)
 
-# NLP model for extracting key concepts/definitions
+# Document/file management ====================================================
+def read_file(file) -> str:
+    filename = file.filename.lower()
+    mimetype, _ = mimetypes.guess_type(filename)
+
+    # TXT / JAVA / PY files
+    if filename.endswith(('.txt', '.java', '.py')):
+        try:
+            return file.read().decode('utf-8')
+        except UnicodeDecodeError:
+            file.seek(0)
+            return file.read().decode('windows-1251')  # fallback for Cyrillic
+
+    # DOCX files
+    elif filename.endswith('.docx'):
+        doc = Document(file)
+        return '\n'.join([para.text for para in doc.paragraphs])
+
+    # PDF files
+    elif filename.endswith('.pdf'):
+        reader = PyPDF2.PdfReader(file)
+        text = ''
+        for page in reader.pages:
+            text += page.extract_text() or ''
+        return text
+
+    else:
+        raise ValueError("Unsupported file type. Only .txt, .java, .docx, .pdf are supported.")
+
+
+# request needs to have an uploaded file in the body with key "file"
+# tested with Postman, functions works
+@app.route("/upload", methods=["POST"])
+def upload():
+    if 'file' not in request.files:
+        return {"error": "No file part in the request"}, 400
+
+    uploaded_file = request.files['file']
+    if uploaded_file.filename == '':
+        return {"error": "No selected file"}, 400
+
+    try:
+        file_content = read_file(uploaded_file)
+        return {"content": file_content}, 200  # preview only
+    except ValueError as e:
+        return {"error": str(e)}, 400
+
+
+# ======================================================================
+# NLP model for extracting key concepts/definitions ====================
+# todo research about facebook/bart-large-cnn, dslim/bert-base-NER, spaCy or keyBert models
 concept_extractor = pipeline("ner", model="dslim/bert-base-NER")
+
+
+def extract_key_concepts(text):
+    entities = concept_extractor(text)
+    return list(set(ent['word'] for ent in entities if ent['entity'] in ['ORG', 'PER', 'LOC', 'MISC']))
+
 
 model_name = "iarfmoose/t5-base-question-generator"
 tokenizer = T5Tokenizer.from_pretrained(model_name, legacy=True)
@@ -24,11 +76,8 @@ model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-def extract_key_concepts(text):
-    entities = concept_extractor(text)
-    return list(set(ent['word'] for ent in entities if ent['entity'] in ['ORG', 'PER', 'LOC', 'MISC']))
 
-
+# Question generation ========================================================
 def generate_questions(text, num=5, q_type="mcq", lang="en", instructions=""):
     key_concepts = extract_key_concepts(text)
 

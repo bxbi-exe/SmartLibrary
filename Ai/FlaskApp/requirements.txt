@@ -8,3 +8,5 @@ protobuf
 tqdm
 requests
 safetensors
+python-docx
+PyPDF2
